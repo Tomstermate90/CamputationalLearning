@@ -12,15 +12,11 @@ algorithm with Gini impurity as the splitting criterion. The implementation incl
 Mathematical Foundation:
 - Gini Impurity: 1 - Σ(p_i)² where p_i is the probability of class i
 - Information Gain: Parent_Gini - Weighted_Average(Children_Gini)
-
-Author: Academic Assignment
-Date: 2025
 """
 
 import numpy as np
 from collections import Counter
-import matplotlib.pyplot as plt
-from typing import Union, List, Tuple, Optional
+from typing import Tuple, Optional
 
 
 class Node:
@@ -28,7 +24,7 @@ class Node:
     Represents a single node in the decision tree.
 
     Each node can either be:
-    1. Internal node: Contains a splitting condition (feature + threshold)
+    1. Internal node: Contains a splitting condition (feature and threshold)
     2. Leaf node: Contains a class prediction
 
     Attributes:
@@ -137,7 +133,7 @@ class DecisionTreeClassifier:
         class_counts = Counter(y)
         total_samples = len(y)
 
-        # Calculate probability of each class: p_i = count_i / total
+        # Calculate the probability of each class: p_i = count_i / total
         gini = 1.0
         for class_count in class_counts.values():
             probability = class_count / total_samples  # p_i
@@ -145,7 +141,7 @@ class DecisionTreeClassifier:
 
         return gini
 
-    def _find_best_split(self, X: np.ndarray, y: np.ndarray) -> Tuple[int, float, float]:
+    def _find_best_split(self, x: np.ndarray, y: np.ndarray) -> Tuple[int, float, float]:
         """
         Find the best feature and threshold to split the data.
 
@@ -161,8 +157,8 @@ class DecisionTreeClassifier:
         2. Return the best feature, threshold, and information gain
 
         Args:
-            X: Feature matrix (n_samples, n_features)
-            y: Target labels (n_samples,)
+            x: Feature matrix (n_samples, n_features)
+            y: Target labels (n_samples, n_classes)
 
         Returns:
             Tuple containing:
@@ -170,23 +166,23 @@ class DecisionTreeClassifier:
             - best_threshold (float): Best threshold value for splitting
             - best_gain (float): Information gain from the best split
         """
-        n_samples, n_features = X.shape
+        n_samples, n_features = x.shape
 
         # If all samples have the same label, no split can improve purity
         if len(set(y)) == 1:
-            return None, None, 0.0
+            return 0, 0.0, 0.0
 
         # Calculate current Gini impurity (before splitting)
         current_gini = self._calculate_gini(y)
 
         # Initialize variables to track the best split
         best_gain = 0.0  # Best information gain found
-        best_feature = None  # Feature index for best split
-        best_threshold = None  # Threshold value for best split
+        best_feature = None  # Feature index for the best split
+        best_threshold = None  # Threshold value for the best split
 
         # Evaluate splits for each feature
         for feature_idx in range(n_features):
-            feature_values = X[:, feature_idx]  # Extract feature column
+            feature_values = x[:, feature_idx]  # Extract feature column
 
             # Get unique values as potential split points
             # We use unique values to avoid redundant splits
@@ -194,11 +190,11 @@ class DecisionTreeClassifier:
 
             # For each unique value, try it as a threshold
             for threshold in unique_values:
-                # Split data based on threshold
-                left_mask = feature_values <= threshold  # Boolean mask for left split
-                right_mask = feature_values > threshold  # Boolean mask for right split
+                # Split data based on a threshold
+                left_mask = feature_values <= threshold  # Boolean mask for the left split
+                right_mask = feature_values > threshold  # Boolean mask for the right split
 
-                # Skip if split results in empty left or right group
+                # Skip if split results in an empty left or right group
                 if not np.any(left_mask) or not np.any(right_mask):
                     continue
 
@@ -217,7 +213,7 @@ class DecisionTreeClassifier:
                 # Calculate information gain: reduction in impurity
                 gain = current_gini - weighted_gini
 
-                # Update best split if this one is better
+                # Update the best split if this one is better
                 if gain > best_gain:
                     best_gain = gain
                     best_feature = feature_idx
@@ -225,7 +221,7 @@ class DecisionTreeClassifier:
 
         return best_feature, best_threshold, best_gain
 
-    def _build_tree(self, X: np.ndarray, y: np.ndarray, depth: int = 0) -> Node:
+    def _build_tree(self, x: np.ndarray, y: np.ndarray, depth: int = 0) -> Node:
         """
         Recursively build the decision tree.
 
@@ -242,7 +238,7 @@ class DecisionTreeClassifier:
         - No split provides information gain
 
         Args:
-            X: Feature matrix for current node
+            x: Feature matrix for current node
             y: Labels for current node
             depth: Current depth in the tree
 
@@ -255,12 +251,12 @@ class DecisionTreeClassifier:
         gini = self._calculate_gini(y)
         most_common_class = Counter(y).most_common(1)[0][0]  # Majority class
 
-        # Create leaf node if stopping criteria are met
+        # Create a leaf node if stopping criteria are met
         should_stop = (
                 depth >= self.max_depth or  # Max depth reached
                 n_samples < self.min_samples_split or  # Too few samples to split
-                gini == 0.0 or  # Pure node (all same class)
-                len(set(y)) == 1  # All samples same class
+                gini == 0.0 or  # Pure node (all the same class)
+                len(set(y)) == 1  # All samples the same class
         )
 
         if should_stop:
@@ -268,14 +264,14 @@ class DecisionTreeClassifier:
             return Node(prediction=most_common_class, samples=n_samples, gini=gini)
 
         # Find the best split for this node
-        best_feature, best_threshold, best_gain = self._find_best_split(X, y)
+        best_feature, best_threshold, best_gain = self._find_best_split(x, y)
 
-        # If no beneficial split found, create leaf node
+        # If no beneficial split found, create a leaf node
         if best_feature is None or best_gain == 0.0:
             return Node(prediction=most_common_class, samples=n_samples, gini=gini)
 
         # Split the data based on the best split found
-        feature_values = X[:, best_feature]
+        feature_values = x[:, best_feature]
         left_mask = feature_values <= best_threshold
         right_mask = feature_values > best_threshold
 
@@ -284,10 +280,10 @@ class DecisionTreeClassifier:
             return Node(prediction=most_common_class, samples=n_samples, gini=gini)
 
         # Recursively build left and right subtrees
-        left_child = self._build_tree(X[left_mask], y[left_mask], depth + 1)
-        right_child = self._build_tree(X[right_mask], y[right_mask], depth + 1)
+        left_child = self._build_tree(x[left_mask], y[left_mask], depth + 1)
+        right_child = self._build_tree(x[right_mask], y[right_mask], depth + 1)
 
-        # Create and return internal node
+        # Create and return the internal node
         return Node(
             feature=best_feature,
             threshold=best_threshold,
@@ -326,7 +322,7 @@ class DecisionTreeClassifier:
         # Information gain from this split
         gain = current_impurity - children_impurity
 
-        # Weight by number of samples reaching this node
+        # Weight by the number of samples reaching this node
         importance = (node.samples / total_samples) * gain
 
         # Add to feature importance score
@@ -336,7 +332,7 @@ class DecisionTreeClassifier:
         self._calculate_feature_importance(node.left, total_samples)
         self._calculate_feature_importance(node.right, total_samples)
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> 'DecisionTreeClassifier':
+    def fit(self, x: np.ndarray, y: np.ndarray) -> 'DecisionTreeClassifier':
         """
         Train the decision tree classifier.
 
@@ -345,31 +341,31 @@ class DecisionTreeClassifier:
         importance scores.
 
         Args:
-            X: Training feature matrix (n_samples, n_features)
-            y: Training labels (n_samples,)
+            x: Training feature matrix (n_samples, n_features)
+            y: Training labels (n_samples, n_classes)
 
         Returns:
             self: The fitted classifier
         """
         # Validate input data
-        if len(X) != len(y):
+        if len(x) != len(y):
             raise ValueError("X and y must have the same number of samples")
 
-        if len(X) == 0:
+        if len(x) == 0:
             raise ValueError("Cannot fit with empty dataset")
 
         # Convert to numpy arrays if needed
-        X = np.array(X)
+        x = np.array(x)
         y = np.array(y)
 
         # Initialize feature importance scores
-        self.feature_importances_ = np.zeros(X.shape[1])
+        self.feature_importances_ = np.zeros(x.shape[1])
 
-        # Build the decision tree starting from root
-        self.root = self._build_tree(X, y, depth=0)
+        # Build the decision tree starting from the root
+        self.root = self._build_tree(x, y, depth=0)
 
         # Calculate feature importance scores
-        self._calculate_feature_importance(self.root, len(X))
+        self._calculate_feature_importance(self.root, len(x))
 
         # Normalize feature importance scores to sum to 1
         if np.sum(self.feature_importances_) > 0:
@@ -392,9 +388,9 @@ class DecisionTreeClassifier:
         """
         node = self.root
 
-        # Traverse tree until reaching a leaf node
+        # Traverse the tree until reaching a leaf node
         while not node.is_leaf():
-            # Follow left branch if feature value <= threshold
+            # Follow the left branch if feature value <= threshold
             if x[node.feature] <= node.threshold:
                 node = node.left
             else:
@@ -403,27 +399,27 @@ class DecisionTreeClassifier:
         # Return the prediction from the leaf node
         return node.prediction
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, x: np.ndarray) -> np.ndarray:
         """
         Predict classes for multiple samples.
 
         Args:
-            X: Feature matrix for prediction (n_samples, n_features)
+            x: Feature matrix for prediction (n_samples, n_features)
 
         Returns:
-            np.ndarray: Predicted class labels (n_samples,)
+            np.ndarray: Predicted class labels (n_samples, n_classes)
         """
-        # Check if model has been trained
+        # Check if a model has been trained
         if self.root is None:
             raise ValueError("Model must be fitted before making predictions")
 
-        # Convert to numpy array if needed
-        X = np.array(X)
+        # Convert to the numpy array if needed
+        x = np.array(x)
 
         # Predict each sample individually
         predictions = []
-        for i in range(len(X)):
-            prediction = self._predict_sample(X[i])
+        for i in range(len(x)):
+            prediction = self._predict_sample(x[i])
             predictions.append(prediction)
 
         return np.array(predictions)

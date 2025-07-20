@@ -21,8 +21,6 @@ Advantages over single Decision Tree:
 - Robust to noise and outliers
 - Provides feature importance through averaging
 
-Author: Academic Assignment
-Date: 2025
 """
 
 import numpy as np

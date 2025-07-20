@@ -23,8 +23,6 @@ AdaBoost Properties:
 - Sensitive to noise and outliers
 - Tends to converge to low training error
 
-Author: Academic Assignment
-Date: 2025
 """
 
 import numpy as np
